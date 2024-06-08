@@ -1,0 +1,6 @@
+(subdir ml
+  (rule
+    (alias default)
+    (targets difc.ml)
+    (deps %{bin:fstar.exe})
+    (action (run fstar.exe --codegen OCaml ../fstar/difc.fst))))
