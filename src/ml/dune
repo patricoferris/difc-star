@@ -1,0 +1,11 @@
+; Only want 
+
+(env
+ (_
+  (flags
+   (:standard -w -8))))
+
+(library
+ (public_name difc)
+ (libraries fstar.lib difc.fstar)
+ (name difc))

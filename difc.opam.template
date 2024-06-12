@@ -1,0 +1,4 @@
+pin-depends: [
+  # For OCaml 5 support, also patches Z3
+  [ "fstar.dev" "git+https://github.com/patricoferris/FStar#37218f1133bb6e74633deefa296c9cce02ae116d" ]
+]

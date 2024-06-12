@@ -1,4 +1,4 @@
-module Difc
+module Difc_fstar
 
 module Map = FStar.OrdMap
 module Set = FStar.OrdSet
@@ -10,9 +10,11 @@ module Set = FStar.OrdSet
    of principals providing they meet certain properties. *)
 
 (* A label is an ordered map from principals to sets of principals.
-   A principal can be any decidably equal type. *)
+   A principal can be any decidably equal type. 
 
-type label a f = Map.ordmap a (Set.ordset a f) f
+   We also restrict labels to not being empty. *)
+
+type label a f = m:(Map.ordmap a (Set.ordset a f) f) { ~(Map.equal m (Map.empty #a #(Set.ordset a f))) }
 
 (* The owners of a label is the domain of the ordered map *)
 let owners #p #f (m : label p f) = Map.dom m
@@ -27,11 +29,14 @@ let readers_with_empty (#p:eqtype) #f (k : p) (l : label p f) : Set.ordset p f =
 let effective_readers #p #f (m : label p f) : Set.ordset p f =
   let g (acc : Set.ordset p f) (k : p) =
     match Map.select k m with
-	| None -> acc
-	| Some readers ->
-      Set.intersect acc readers
+	| None -> acc (* Actually not possible, should work into the proof *)
+	| Some readers -> Set.intersect acc readers
   in
-  Set.fold #p #(Set.ordset p f) g Set.empty (owners m)
+  (* Labels have at least one owner, this is an easier trick 
+     to avoid having to use option types. *)
+  Map.choose_m m;
+  let _choosen_owner, choosen_readers = match Map.choose m with Some m -> m in
+  Set.fold #p #(Set.ordset p f) g choosen_readers (owners m)
 
 let subset_for_all #e #f (s1 : Set.ordset e f) (s2 : Set.ordset e f) :
   Lemma (requires Set.subset s1 s2)
@@ -41,7 +46,7 @@ let subset_for_all #e #f (s1 : Set.ordset e f) (s2 : Set.ordset e f) :
 val for_all: (#p:eqtype) -> (#f:Set.cmp p) -> (p -> Tot bool) -> Set.ordset p f -> Tot bool
 let for_all f s = List.Tot.for_all f (Set.as_list s)
 
-let is_a_restriction #p #f (l1 : label p f) (l2 : label p f) =
+let is_a_restriction #p #f (l1 : label p f) (l2 : label p f) : prop =
   let pred (principal : p) : Tot bool =
     Set.subset (readers_with_empty principal l2) (readers_with_empty principal l1)
   in

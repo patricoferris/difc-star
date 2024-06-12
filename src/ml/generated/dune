@@ -1,0 +1,19 @@
+; Only want this on the generated FStar code
+
+(env
+ (_
+  (flags
+   (:standard -w -8))))
+
+(rule
+ (target difc_fstar.ml)
+ (mode promote)
+ (deps
+  (:fstar_source ../../fstar/difc_fstar.fst))
+ (action
+  (run %{bin:fstar.exe} --codegen OCaml %{fstar_source})))
+
+(library
+ (name difc_fstar)
+ (public_name difc.fstar)
+ (libraries fstar.lib))
