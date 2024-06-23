@@ -9,7 +9,7 @@ module type Principal = sig
 end
 
 module Make (P : Principal) = struct
-  type 'a t = (P.t, 'a, unit) FStar_OrdMap.ordmap
+  type t = (P.t, P.t list, unit) FStar_OrdMap.ordmap
 
   (* Don't expose! *)
   let empty = M.empty P.equal
@@ -17,4 +17,26 @@ module Make (P : Principal) = struct
   let v owner readers = empty |> add owner readers
   let owners v = Low_level.owners P.equal v
   let effective_readers v = Low_level.effective_readers P.equal v
+
+  module Monad = struct
+    type v = t
+    type 'a t = ('a, P.t, unit) Difc_fstar_monad.difc_monad
+
+    let label (v : 'a t) = v.label
+    let return (l : v) (v : 'a) : 'a t = Difc_fstar_monad.return P.equal l v
+
+    let bind (fn : 'a -> 'b t) (v : 'a t) : 'b t =
+      Difc_fstar_monad.bind P.equal fn v
+
+    let map (fn : 'a -> 'b) (v : 'a t) : 'b t =
+      Difc_fstar_monad.map P.equal fn v
+
+    let map_pair (f : 'a -> 'b -> 'c) (m : 'a t) (n : 'b t) : 'c t =
+      Difc_fstar_monad.map_pair P.equal f m n
+
+    module Syntax = struct
+      let ( let+ ) v f = map f v
+      let ( let* ) v f = bind f v
+    end
+  end
 end

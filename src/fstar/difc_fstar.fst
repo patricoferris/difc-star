@@ -2,6 +2,7 @@ module Difc_fstar
 
 module Map = FStar.OrdMap
 module Set = FStar.OrdSet
+module List = FStar.List.Tot
 
 (* A verified DIFC algorithm for user-defined principals. 
    
@@ -16,8 +17,30 @@ module Set = FStar.OrdSet
 
 type label a f = m:(Map.ordmap a (Set.ordset a f) f) { ~(Map.equal m (Map.empty #a #(Set.ordset a f))) }
 
+let equal (#p:eqtype) (#f:Map.cmp p) (m1 : label p f) (m2 : label p f) =
+  Map.equal m1 m2
+
+val lemma_map_update_empty :
+  #k:eqtype -> 
+  #v:Type ->
+  #f:Map.cmp k ->
+  key:k ->
+  value:v ->
+  Lemma 
+  (ensures ~(Map.equal (Map.update #k #v #f key value (Map.empty #k #v #f)) (Map.empty #k #v #f)))
+let lemma_map_update_empty #k #v #f key value =
+  let t = Map.update #k #v #f key value (Map.empty #k #v #f) in
+  Map.size_remove #k #v #f key t;
+  assert (Map.size t <> 0);
+  assert (Map.size (Map.empty #k #v #f) == 0)
+
+(* A constructor for labels that also ensures they are non-empty *)
+let v (#p:eqtype) (#f:Map.cmp p) (o : p) (v : Set.ordset p f) : label p f =
+  lemma_map_update_empty #p #(Set.ordset p f) #f o v;
+  Map.update o v (Map.empty)
+
 (* The owners of a label is the domain of the ordered map *)
-let owners #p #f (m : label p f) = Map.dom m
+let owners #p #f (m : label p f) : s:(Set.ordset p f) { ~(Set.equal s (Set.empty #p #f)) } = Map.dom m
 
 let readers_with_empty (#p:eqtype) #f (k : p) (l : label p f) : Set.ordset p f =
   match Map.select k l with
@@ -53,14 +76,6 @@ let is_a_restriction #p #f (l1 : label p f) (l2 : label p f) : prop =
   Set.subset (owners l1) (owners l2) /\ 
   for_all pred (owners l1)
 
-(* TODO: What is the best way to structure an F* proof?
-   Here we define the function that is to be a restriction and then prove
-   the lemmas that make up the definition? *)
-let lemma_restriction_means_owner_subset #p #f (l1 : label p f) (l2 : label p f) :
- Lemma (requires is_a_restriction l1 l2)
-       (ensures Set.subset (owners l1) (owners l2)) =
-	   ()
-
 let readers_agree (#p:eqtype) #f (o : p) (l1 : label p f) (l2 : label p f) =
  Set.subset (readers_with_empty o l1) (readers_with_empty o l2)
 
@@ -72,6 +87,13 @@ let for_all_mem
 : Lemma
   (for_all f l <==> (forall x . Set.mem x l ==> f x))
 = List.Tot.for_all_mem f (Set.as_list l)
+
+(* The following two lemmas about [is_a_restriction] ensure it matches 
+   the original definition by Myers et al. *)
+let lemma_restriction_means_owner_subset #p #f (l1 : label p f) (l2 : label p f) :
+ Lemma (requires is_a_restriction l1 l2)
+       (ensures Set.subset (owners l1) (owners l2)) =
+	   ()
 
 val lemma_restriction_means_all_readers_agree :
   #p:eqtype ->
@@ -86,3 +108,49 @@ let lemma_restriction_means_all_readers_agree #p #f l1 l2 =
   in
   for_all_mem pred (owners l1)
 
+let add (#p:eqtype) (#f:Map.cmp p) (o : p) (v : Set.ordset p f) (l : label p f) : label p f =
+  Map.update o v l
+
+let join (#p:eqtype) (#f:Map.cmp p) (l1 : label p f) (l2 : label p f) =
+  let owners_l1 = owners l1 in
+  let owners_l2 = owners l2 in
+  let update_from_label 
+    (o : p) 
+	(from_label : label p f { Map.contains o from_label }) 
+	(other_label : label p f) 
+	(m : label p f) : (y : label p f {Map.contains o y}) =
+     match Map.select o from_label, Map.select o other_label with
+	  | Some rs, None -> add o rs m
+	  | Some r1, Some r2 -> add o (Set.intersect r1 r2) m
+  in
+  let rec fold 
+    (from_label : label p f)
+	(os : list p { os <> [] /\ List.subset os (Set.as_list (owners from_label)) })
+	(other_label : label p f)
+	(macc : label p f) : (res : label p f) = match os with
+    | [ o ] -> 
+	  let v = update_from_label o from_label other_label macc in
+	  assert (List.hd os = o);
+	  assert (Map.contains o v);
+	  v
+	| o :: rest -> 
+      let v = update_from_label o from_label other_label macc in
+	  assert (List.hd os = o);
+	  assert (Map.contains o v);
+	  fold from_label rest other_label v
+  in
+  Map.choose_m l1;
+  let choosen_owner, choosen_readers = match Map.choose l1 with Some m -> m in
+  let start = v choosen_owner choosen_readers in
+  let m1 = fold l1 (Set.as_list owners_l1) l2 start in
+  (* lemma_restriction_means_owner_subset l1 m1; *)
+  let m2 = fold l2 (Set.as_list owners_l2) l1 m1 in
+  (* lemma_restriction_means_owner_subset l1 m2; *)
+  m2
+
+assume val lemma_join_is_a_restriction : 
+  #p:eqtype ->
+  #f:Map.cmp p ->
+  l1 : label p f ->
+  l2 : label p f ->
+  Lemma (ensures is_a_restriction l1 (join l1 l2))

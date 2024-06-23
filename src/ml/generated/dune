@@ -6,14 +6,16 @@
    (:standard -w -8))))
 
 (rule
- (target difc_fstar.ml)
+ (targets difc_fstar.ml difc_fstar_monad.ml)
  (mode promote)
  (deps
-  (:fstar_source ../../fstar/difc_fstar.fst))
+  (:fstar_source ../../fstar/difc_fstar.fst)
+  (:monad_source ../../fstar/difc_fstar.monad.fst))
  (action
-  (run %{bin:fstar.exe} --codegen OCaml %{fstar_source})))
+  (run %{bin:fstar.exe} --codegen OCaml %{monad_source} %{fstar_source})))
 
 (library
  (name difc_fstar)
+ (wrapped false)
  (public_name difc.fstar)
  (libraries fstar.lib))

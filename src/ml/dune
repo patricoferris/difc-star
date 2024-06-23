@@ -3,7 +3,7 @@
 (env
  (_
   (flags
-   (:standard -w -8))))
+   (:standard -w -27-8))))
 
 (library
  (public_name difc)
