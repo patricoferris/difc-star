@@ -52,14 +52,14 @@ let readers_with_empty (#p:eqtype) #f (k : p) (l : label p f) : Set.ordset p f =
 let effective_readers #p #f (m : label p f) : Set.ordset p f =
   let g (acc : Set.ordset p f) (k : p) =
     match Map.select k m with
-	| None -> acc (* Actually not possible, should work into the proof *)
-	| Some readers -> Set.intersect acc readers
+	| None -> acc
+	| Some readers ->
+	  Set.intersect #p #f readers acc
   in
-  (* Labels have at least one owner, this is an easier trick 
-     to avoid having to use option types. *)
   Map.choose_m m;
-  let _choosen_owner, choosen_readers = match Map.choose m with Some m -> m in
-  Set.fold #p #(Set.ordset p f) g choosen_readers (owners m)
+  let Some (o, o_readers) = Map.choose m in
+  let os = Set.remove o (owners m) in
+  Set.fold #p #(Set.ordset p f) g o_readers os
 
 let subset_for_all #e #f (s1 : Set.ordset e f) (s2 : Set.ordset e f) :
   Lemma (requires Set.subset s1 s2)

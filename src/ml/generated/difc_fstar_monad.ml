@@ -40,20 +40,16 @@ let map :
     'p FStar_OrdMap.cmp ->
       ('a -> 'b) -> ('a, 'p, unit) difc_monad -> ('b, 'p, unit) difc_monad
   =
-  fun f ->
-    fun fn ->
-      fun v -> let b1 = fn v.value in { value = b1; label = (v.label) }
-let map_pair :
+  fun f -> fun fn -> fun v1 -> { value = (fn v1.value); label = (v1.label) }
+let pair :
   'a 'b 'c 'p .
     'p FStar_OrdMap.cmp ->
-      ('a -> 'b -> 'c) ->
-        ('a, 'p, unit) difc_monad ->
-          ('b, 'p, unit) difc_monad -> ('c, 'p, unit) difc_monad
+      ('a, 'p, unit) difc_monad ->
+        ('b, 'p, unit) difc_monad -> (('a * 'b), 'p, unit) difc_monad
   =
   fun f ->
-    fun fn ->
-      fun v1 ->
-        fun v2 ->
-          let v' = fn v1.value v2.value in
-          let l' = Difc_fstar.join f v1.label v2.label in
-          { value = v'; label = l' }
+    fun v1 ->
+      fun v2 ->
+        let v' = ((v1.value), (v2.value)) in
+        let l' = Difc_fstar.join f v1.label v2.label in
+        { value = v'; label = l' }

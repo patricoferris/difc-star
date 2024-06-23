@@ -1,5 +1,7 @@
 (lang dune 3.15)
 
+(using mdx 0.4)
+
 (generate_opam_files true)
 
 (license MIT)

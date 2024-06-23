@@ -28,16 +28,14 @@ let bind (#a:Type) (#b:Type) (#c:Type) (#p:eqtype) (#f:Map.cmp p)
 	assert (equal (get_label res) (join v_label dm.label));
 	res
 
-let map (#a:Type) (#b:Type) (#c:Type) (#p:eqtype) (#f:Map.cmp p) 
-  (fn : a -> b) 
-  (v : difc_monad a p f) =
-    let b = fn v.value in
-	{ value = b; label = v.label }
+let map (#a:Type) (#b:Type) (#c:Type) (#p:eqtype) (#f:Map.cmp p)
+  (fn : a -> b)
+  (v1 : difc_monad a p f)  =
+  { value = fn v1.value; label = v1.label }
 
-let map_pair (#a:Type) (#b:Type) (#c:Type) (#p:eqtype) (#f:Map.cmp p) 
-  (fn : a -> b -> c) 
+let pair (#a:Type) (#b:Type) (#c:Type) (#p:eqtype) (#f:Map.cmp p) 
   (v1 : difc_monad a p f) 
   (v2 : difc_monad b p f) =
-  let v' = fn v1.value v2.value in
+  let v' = (v1.value, v2.value) in
   let l' = join v1.label v2.label in
   { value = v'; label = l' }

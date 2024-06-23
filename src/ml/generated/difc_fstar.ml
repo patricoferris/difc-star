@@ -37,13 +37,12 @@ let effective_readers :
         match FStar_OrdMap.select f k m with
         | FStar_Pervasives_Native.None -> acc
         | FStar_Pervasives_Native.Some readers ->
-            FStar_OrdSet.intersect f acc readers in
-      let uu___ =
-        match FStar_OrdMap.choose f m with
-        | FStar_Pervasives_Native.Some m1 -> m1 in
+            FStar_OrdSet.intersect f readers acc in
+      let uu___ = FStar_OrdMap.choose f m in
       match uu___ with
-      | (_choosen_owner, choosen_readers) ->
-          FStar_OrdSet.fold f g choosen_readers (owners f m)
+      | FStar_Pervasives_Native.Some (o, o_readers) ->
+          let os = FStar_OrdSet.remove f o (owners f m) in
+          FStar_OrdSet.fold f g o_readers os
 let for_all :
   'p .
     'p FStar_OrdSet.cmp ->
